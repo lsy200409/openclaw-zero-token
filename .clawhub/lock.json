@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "browser-automation": {
+      "version": "1.0.1",
+      "installedAt": 1776504491214
+    },
+    "github-cli": {
+      "version": "1.0.0",
+      "installedAt": 1776504612732
+    },
+    "smart-file-manager": {
+      "version": "1.2.0",
+      "installedAt": 1776504618918
+    }
+  }
+}
