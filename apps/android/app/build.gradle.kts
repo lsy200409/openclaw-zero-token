@@ -153,14 +153,14 @@ ktlint {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.03.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.05.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
     implementation("androidx.core:core-ktx:1.18.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.webkit:webkit:1.15.0")
+    implementation("androidx.webkit:webkit:1.16.0")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -173,15 +173,15 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     // Material Components (XML theme + resources)
-    implementation("com.google.android.material:material:1.13.0")
+    implementation("com.google.android.material:material:1.14.0")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     implementation("androidx.security:security-crypto:1.1.0")
     implementation("androidx.exifinterface:exifinterface:1.4.2")
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.83")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
     implementation("org.commonmark:commonmark:0.28.0")
     implementation("org.commonmark:commonmark-ext-autolink:0.28.0")
     implementation("org.commonmark:commonmark-ext-gfm-strikethrough:0.28.0")
@@ -200,7 +200,7 @@ dependencies {
     implementation("dnsjava:dnsjava:3.6.4")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("io.kotest:kotest-runner-junit5-jvm:6.1.11")
     testImplementation("io.kotest:kotest-assertions-core-jvm:6.1.11")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
