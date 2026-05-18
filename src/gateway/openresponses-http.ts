@@ -415,6 +415,7 @@ async function runResponsesAgentCommand(params: {
   sessionKey: string;
   runId: string;
   messageChannel: string;
+  agentId?: string;
   deps: ReturnType<typeof createDefaultDeps>;
 }) {
   return agentCommandFromIngress(
@@ -427,6 +428,7 @@ async function runResponsesAgentCommand(params: {
       streamParams: params.streamParams ?? undefined,
       sessionKey: params.sessionKey,
       runId: params.runId,
+      agentId: params.agentId,
       deliver: false,
       messageChannel: params.messageChannel,
       bestEffortDeliver: false,
@@ -695,6 +697,7 @@ export async function handleOpenResponsesHttpRequest(
         sessionKey,
         runId: responseId,
         messageChannel,
+        agentId,
         deps,
       });
 
@@ -947,6 +950,7 @@ export async function handleOpenResponsesHttpRequest(
         sessionKey,
         runId: responseId,
         messageChannel,
+        agentId,
         deps,
       });
 

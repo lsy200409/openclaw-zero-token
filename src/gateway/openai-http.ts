@@ -106,6 +106,7 @@ function buildAgentCommandInput(params: {
   sessionKey: string;
   runId: string;
   messageChannel: string;
+  agentId?: string;
 }) {
   return {
     message: params.prompt.message,
@@ -114,6 +115,7 @@ function buildAgentCommandInput(params: {
     model: params.modelOverride,
     sessionKey: params.sessionKey,
     runId: params.runId,
+    agentId: params.agentId,
     deliver: false as const,
     messageChannel: params.messageChannel,
     bestEffortDeliver: false as const,
@@ -492,6 +494,7 @@ export async function handleOpenAiHttpRequest(
     sessionKey,
     runId,
     messageChannel,
+    agentId,
   });
 
   if (!stream) {

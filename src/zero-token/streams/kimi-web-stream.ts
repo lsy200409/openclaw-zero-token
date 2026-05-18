@@ -5,6 +5,7 @@ import {
   type TextContent,
   type ThinkingContent,
   type ToolCall,
+  type ToolResultMessage,
 } from "@mariozechner/pi-ai";
 import {
   KimiWebClientBrowser,
@@ -13,6 +14,7 @@ import {
 import { stripInboundMeta } from "./strip-inbound-meta.js";
 
 const sessionMap = new Map<string, string>();
+const historyMap = new Map<string, Array<{ role: string; content: string }>>();
 
 export function createKimiWebStreamFn(cookieOrJson: string): StreamFn {
   let options: KimiWebClientOptions;
@@ -32,22 +34,49 @@ export function createKimiWebStreamFn(cookieOrJson: string): StreamFn {
         await client.init();
 
         const sessionKey = (context as unknown as { sessionId?: string }).sessionId || "default";
-        let sessionId = sessionMap.get(sessionKey);
+        const providerKey = model.provider ?? sessionKey;
+        let sessionId = sessionMap.get(providerKey);
 
         const messages = context.messages || [];
 
-        // Kimi web uses DOM simulation — only send the last user message.
-        // System prompts, tools, and full history would overwhelm the input.
         let prompt = "";
-        const lastUserMessage = [...messages].toReversed().find((m) => m.role === "user");
-        if (lastUserMessage) {
-          if (typeof lastUserMessage.content === "string") {
-            prompt = lastUserMessage.content;
-          } else if (Array.isArray(lastUserMessage.content)) {
-            prompt = (lastUserMessage.content as TextContent[])
-              .filter((part) => part.type === "text")
-              .map((part) => part.text)
-              .join("");
+        if (sessionId) {
+          const lastMsg = messages[messages.length - 1];
+          if (lastMsg?.role === "toolResult") {
+            const tr = lastMsg as unknown as ToolResultMessage;
+            let resultText = "";
+            if (Array.isArray(tr.content)) {
+              for (const part of tr.content) {
+                if (part.type === "text") {
+                  resultText += part.text;
+                }
+              }
+            }
+            prompt = `\n<tool_response id="${tr.toolCallId}" name="${tr.toolName}">\n${resultText}\n</tool_response>\n\nPlease proceed based on this tool result.`;
+          } else {
+            const lastUserMessage = [...messages].toReversed().find((m) => m.role === "user");
+            if (lastUserMessage) {
+              if (typeof lastUserMessage.content === "string") {
+                prompt = lastUserMessage.content;
+              } else if (Array.isArray(lastUserMessage.content)) {
+                prompt = (lastUserMessage.content as TextContent[])
+                  .filter((part) => part.type === "text")
+                  .map((part) => part.text)
+                  .join("");
+              }
+            }
+          }
+        } else {
+          const lastUserMessage = [...messages].toReversed().find((m) => m.role === "user");
+          if (lastUserMessage) {
+            if (typeof lastUserMessage.content === "string") {
+              prompt = lastUserMessage.content;
+            } else if (Array.isArray(lastUserMessage.content)) {
+              prompt = (lastUserMessage.content as TextContent[])
+                .filter((part) => part.type === "text")
+                .map((part) => part.text)
+                .join("");
+            }
           }
         }
 
@@ -56,13 +85,29 @@ export function createKimiWebStreamFn(cookieOrJson: string): StreamFn {
           throw new Error("No message found to send to KimiWeb API");
         }
 
+        let finalPrompt = prompt;
+        if (sessionId) {
+          const history = historyMap.get(providerKey);
+          if (history && history.length > 0) {
+            const historyText = history
+              .map((h) => `${h.role === "user" ? "用户" : "助手"}: ${h.content}`)
+              .join("\n");
+            finalPrompt = `[之前的对话记录]\n${historyText}\n\n[当前消息]\n${prompt}`;
+          }
+        }
+
         console.log(`[KimiWebStream] Starting run for session: ${sessionKey}`);
+        console.log(`[KimiWebStream] Provider key: ${providerKey}`);
         console.log(`[KimiWebStream] Conversation ID: ${sessionId || "new"}`);
-        console.log(`[KimiWebStream] Prompt length: ${prompt.length}`);
+        console.log(`[KimiWebStream] Prompt length: ${finalPrompt.length}`);
+
+        if (sessionId) {
+          client.setConversationId(sessionId);
+        }
 
         const responseStream = await client.chatCompletions({
           conversationId: sessionId,
-          message: prompt,
+          message: finalPrompt,
           model: model.id,
           signal: streamOptions?.signal,
         });
@@ -327,7 +372,7 @@ export function createKimiWebStreamFn(cookieOrJson: string): StreamFn {
 
             // Extract conversation ID
             if (data.sessionId) {
-              sessionMap.set(sessionKey, data.sessionId);
+              sessionMap.set(providerKey, data.sessionId);
             }
 
             // Extract content delta - Qwen v2 uses choices[0].delta.content
@@ -374,6 +419,25 @@ export function createKimiWebStreamFn(cookieOrJson: string): StreamFn {
         console.log(
           `[KimiWebStream] Stream completed. Parts: ${contentParts.length}, Tools: ${accumulatedToolCalls.length}`,
         );
+
+        const clientConvId = client.getConversationId();
+        if (clientConvId) {
+          sessionMap.set(providerKey, clientConvId);
+        }
+
+        const assistantText = contentParts
+          .filter((p): p is TextContent => p.type === "text")
+          .map((p) => p.text)
+          .join("");
+        if (assistantText && prompt) {
+          const history = historyMap.get(providerKey) || [];
+          history.push({ role: "user", content: prompt });
+          history.push({ role: "assistant", content: assistantText });
+          if (history.length > 20) {
+            history.splice(0, history.length - 20);
+          }
+          historyMap.set(providerKey, history);
+        }
 
         stream.push({
           type: "done",

@@ -34,6 +34,15 @@ export class KimiWebClientBrowser {
   private browser: BrowserContext | null = null;
   private page: Page | null = null;
   private running: RunningChrome | null = null;
+  private conversationId: string | null = null;
+
+  setConversationId(id: string | null) {
+    this.conversationId = id;
+  }
+
+  getConversationId(): string | null {
+    return this.conversationId;
+  }
 
   constructor(options: KimiWebClientOptions | string) {
     if (typeof options === "string") {
@@ -176,12 +185,16 @@ export class KimiWebClientBrowser {
 
     const cookies = await browser.cookies([this.baseUrl]);
     const kimiAuthCookie = cookies.find((c) => c.name === "kimi-auth")?.value;
-    // Prefer accessToken (from localStorage) over kimi-auth cookie
     const authToken = this.accessToken || kimiAuthCookie;
     if (!authToken) {
       throw new Error(
         "Kimi: 未找到认证凭证（accessToken 或 kimi-auth Cookie）。请重新运行 ./onboard.sh 刷新登录状态。",
       );
+    }
+
+    const conversationId = this.conversationId || params.conversationId || crypto.randomUUID();
+    if (!this.conversationId) {
+      this.conversationId = conversationId;
     }
 
     const result = await page.evaluate(
@@ -190,11 +203,13 @@ export class KimiWebClientBrowser {
         message,
         kimiAuthToken,
         scenario,
+        conversationId,
       }: {
         baseUrl: string;
         message: string;
         kimiAuthToken: string;
         scenario: string;
+        conversationId: string | null;
       }) => {
         const req = {
           scenario,
@@ -234,6 +249,7 @@ export class KimiWebClientBrowser {
         const arr = await res.arrayBuffer();
         const u8 = new Uint8Array(arr);
         const texts: string[] = [];
+        let extractedChatId: string | null = null;
         let o = 0;
         while (o + 5 <= u8.length) {
           const len = new DataView(u8.buffer, u8.byteOffset + o + 1, 4).getUint32(0, false);
@@ -249,6 +265,9 @@ export class KimiWebClientBrowser {
                 error:
                   obj.error.message || obj.error.code || JSON.stringify(obj.error).slice(0, 200),
               };
+            }
+            if (!extractedChatId) {
+              extractedChatId = obj.chat_id ?? obj.conversation_id ?? obj.id ?? null;
             }
             // Collect text: only from "append" or "set" ops on assistant response blocks.
             // "append" = incremental streaming chunk, "set" = full replacement.
@@ -275,12 +294,13 @@ export class KimiWebClientBrowser {
           }
           o += 5 + len;
         }
-        return { ok: true as const, text: texts.join("") };
+        return { ok: true as const, text: texts.join(""), chatId: extractedChatId };
       },
       {
         baseUrl: this.baseUrl,
         message: params.message,
         kimiAuthToken: authToken,
+        conversationId,
         scenario: params.model.includes("search")
           ? "SCENARIO_SEARCH"
           : params.model.includes("research")
@@ -295,8 +315,13 @@ export class KimiWebClientBrowser {
       throw new Error(`Kimi API 错误: ${result.error}`);
     }
 
+    if (result.chatId) {
+      this.conversationId = result.chatId;
+    }
+
     const escaped = JSON.stringify(result.text);
-    const sse = `data: {"text":${escaped}}\n\ndata: [DONE]\n\n`;
+    const chatIdJson = result.chatId ? JSON.stringify(result.chatId) : "null";
+    const sse = `data: {"text":${escaped},"sessionId":${chatIdJson}}\n\ndata: [DONE]\n\n`;
     const encoder = new TextEncoder();
     return new ReadableStream({
       start(controller) {

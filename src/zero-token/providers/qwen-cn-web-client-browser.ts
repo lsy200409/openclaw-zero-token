@@ -205,13 +205,14 @@ export class QwenCNWebClientBrowser {
     sessionId?: string;
     message: string;
     model?: string;
-    parentMessageId?: string;
     signal?: AbortSignal;
   }): Promise<ReadableStream<Uint8Array>> {
     const { page } = await this.ensureBrowser();
 
     const model = params.model || "Qwen3.5-Plus";
-    const sessionId = this.localSessionId || params.sessionId ||
+    const sessionId =
+      this.localSessionId ||
+      params.sessionId ||
       Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
 
     console.log(`[Qwen CN Web Browser] Sending message`);
@@ -311,7 +312,7 @@ export class QwenCNWebClientBrowser {
         sessionId,
         model,
         message: params.message,
-        parentMessageId: params.parentMessageId,
+        parentMessageId: null,
         ut: this.ut,
         xsrfToken: this.xsrfToken,
         deviceId: this.deviceId,
@@ -333,16 +334,21 @@ export class QwenCNWebClientBrowser {
           const lines = responseData.data.split("\n");
           for (const line of lines) {
             if (line.startsWith("data:")) {
-              const parsed = JSON.parse(line.slice(5).trim());
-              const sid =
-                parsed.data?.session_id ??
-                parsed.data?.sessionId ??
-                parsed.session_id ??
-                parsed.sessionId;
-              if (sid) {
-                this.localSessionId = String(sid);
-                console.log(`[Qwen CN Web Browser] Stored session_id: ${this.localSessionId}`);
-                break;
+              try {
+                const parsed = JSON.parse(line.slice(5).trim());
+                const sid =
+                  parsed.communication?.sessionid ??
+                  parsed.data?.session_id ??
+                  parsed.data?.sessionId ??
+                  parsed.session_id ??
+                  parsed.sessionId;
+                if (sid) {
+                  this.localSessionId = String(sid);
+                  console.log(`[Qwen CN Web Browser] Stored session_id: ${this.localSessionId}`);
+                  break;
+                }
+              } catch {
+                // skip invalid JSON lines
               }
             }
           }

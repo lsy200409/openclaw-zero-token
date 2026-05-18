@@ -5,6 +5,7 @@ import {
   type TextContent,
   type ThinkingContent,
   type ToolCall,
+  type ToolResultMessage,
 } from "@mariozechner/pi-ai";
 import {
   QwenCNWebClientBrowser,
@@ -40,15 +41,43 @@ export function createQwenCNWebStreamFn(cookieOrJson: string): StreamFn {
         // Qwen CN web uses DOM simulation — only send the last user message.
         // System prompts, tools, and full history would overwhelm the input.
         let prompt = "";
-        const lastUserMessage = [...messages].toReversed().find((m) => m.role === "user");
-        if (lastUserMessage) {
-          if (typeof lastUserMessage.content === "string") {
-            prompt = lastUserMessage.content;
-          } else if (Array.isArray(lastUserMessage.content)) {
-            prompt = (lastUserMessage.content as TextContent[])
-              .filter((part) => part.type === "text")
-              .map((part) => part.text)
-              .join("");
+        if (sessionId) {
+          const lastMsg = messages[messages.length - 1];
+          if (lastMsg?.role === "toolResult") {
+            const tr = lastMsg as unknown as ToolResultMessage;
+            let resultText = "";
+            if (Array.isArray(tr.content)) {
+              for (const part of tr.content) {
+                if (part.type === "text") {
+                  resultText += part.text;
+                }
+              }
+            }
+            prompt = `\n<tool_response id="${tr.toolCallId}" name="${tr.toolName}">\n${resultText}\n</tool_response>\n\nPlease proceed based on this tool result.`;
+          } else {
+            const lastUserMessage = [...messages].toReversed().find((m) => m.role === "user");
+            if (lastUserMessage) {
+              if (typeof lastUserMessage.content === "string") {
+                prompt = lastUserMessage.content;
+              } else if (Array.isArray(lastUserMessage.content)) {
+                prompt = (lastUserMessage.content as TextContent[])
+                  .filter((part) => part.type === "text")
+                  .map((part) => part.text)
+                  .join("");
+              }
+            }
+          }
+        } else {
+          const lastUserMessage = [...messages].toReversed().find((m) => m.role === "user");
+          if (lastUserMessage) {
+            if (typeof lastUserMessage.content === "string") {
+              prompt = lastUserMessage.content;
+            } else if (Array.isArray(lastUserMessage.content)) {
+              prompt = (lastUserMessage.content as TextContent[])
+                .filter((part) => part.type === "text")
+                .map((part) => part.text)
+                .join("");
+            }
           }
         }
 
@@ -348,6 +377,10 @@ export function createQwenCNWebStreamFn(cookieOrJson: string): StreamFn {
             // Extract conversation ID
             if (data.sessionId) {
               sessionMap.set(providerKey, data.sessionId);
+            }
+            // Qwen CN Web returns sessionid in communication field
+            if (data.communication?.sessionid) {
+              sessionMap.set(providerKey, data.communication.sessionid);
             }
 
             // Extract content delta - Qwen v2 uses choices[0].delta.content

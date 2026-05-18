@@ -214,7 +214,11 @@ export class QwenWebClientBrowser {
             }
             const msg = String(err);
             if (msg.includes("aborted") || msg.includes("signal")) {
-              return { ok: false, status: 408, error: `Create chat timed out after ${timeoutMs}ms` };
+              return {
+                ok: false,
+                status: 408,
+                error: `Create chat timed out after ${timeoutMs}ms`,
+              };
             }
             console.error(`[Browser] Create chat exception:`, err);
             return { ok: false, status: 500, error: msg };
@@ -244,8 +248,9 @@ export class QwenWebClientBrowser {
     // Step 2: Send message using the chat_id（加入 fetch 超时，默认 5 分钟，避免长时间无响应导致 run 级 timeout）
     const fetchTimeoutMs = 300_000;
     const fid = crypto.randomUUID();
+    const parentMessageId: string | null = null;
     const responseData = await page.evaluate(
-      async ({ baseUrl, chatId, model, message, fid, timeoutMs }) => {
+      async ({ baseUrl, chatId, model, message, fid, parentMessageId, timeoutMs }) => {
         let timer: ReturnType<typeof setTimeout> | undefined = undefined;
         try {
           const url = `${baseUrl}/api/v2/chat/completions?chat_id=${chatId}`;
@@ -260,11 +265,11 @@ export class QwenWebClientBrowser {
             chat_id: chatId,
             chat_mode: "normal",
             model: model,
-            parent_id: null,
+            parent_id: parentMessageId,
             messages: [
               {
                 fid,
-                parentId: null,
+                parentId: parentMessageId,
                 childrenIds: [],
                 role: "user",
                 content: message,
@@ -346,6 +351,7 @@ export class QwenWebClientBrowser {
         model: model,
         message: params.message,
         fid,
+        parentMessageId,
         timeoutMs: fetchTimeoutMs,
       },
     );
