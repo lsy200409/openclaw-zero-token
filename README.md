@@ -202,7 +202,7 @@ Daily:
 #### Clone and build
 
 ```bash
-git clone https://github.com/linuxhsj/openclaw-zero-token.git
+git clone https://github.com/lsy200409/openclaw-zero-token.git
 cd openclaw-zero-token
 pnpm install
 pnpm build

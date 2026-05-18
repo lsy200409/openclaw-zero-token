@@ -5,13 +5,13 @@
   "keywords": [],
   "homepage": "https://github.com/openclaw/openclaw#readme",
   "bugs": {
-    "url": "https://github.com/openclaw/openclaw/issues"
+    "url": "https://github.com/lsy200409/openclaw-zero-token/issues"
   },
   "license": "MIT",
   "author": "",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openclaw/openclaw.git"
+    "url": "git+https://github.com/lsy200409/openclaw-zero-token.git"
   },
   "bin": {
     "openclaw": "openclaw.mjs"

@@ -254,7 +254,7 @@ AskOnce 一次提问多模型回答
 #### 克隆并编译
 
 ```bash
-git clone https://github.com/linuxhsj/openclaw-zero-token.git
+git clone https://github.com/lsy200409/openclaw-zero-token.git
 cd openclaw-zero-token
 pnpm install
 pnpm build
