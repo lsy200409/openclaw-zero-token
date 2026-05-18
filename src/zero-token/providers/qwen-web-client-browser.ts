@@ -33,6 +33,8 @@ export class QwenWebClientBrowser {
   private page: Page | null = null;
   private running: RunningChrome | null = null;
   private chatId: string | null = null; // 复用对话 ID，避免每次建新聊天
+  private parentMessageId: string | null = null; // 上次请求的消息 fid，用于对话树链接
+  private lastFid: string | null = null; // 上次请求的 fid
 
   setConversationId(id: string | null) {
     this.chatId = id;
@@ -40,6 +42,14 @@ export class QwenWebClientBrowser {
 
   getConversationId(): string | null {
     return this.chatId;
+  }
+
+  setParentMessageId(id: string | null) {
+    this.parentMessageId = id;
+  }
+
+  getParentMessageId(): string | null {
+    return this.parentMessageId;
   }
 
   constructor(options: QwenWebClientOptions | string) {
@@ -153,6 +163,7 @@ export class QwenWebClientBrowser {
 
   async chatCompletions(params: {
     conversationId?: string;
+    parentMessageId?: string | null;
     message: string;
     model?: string;
     signal?: AbortSignal;
@@ -248,7 +259,8 @@ export class QwenWebClientBrowser {
     // Step 2: Send message using the chat_id（加入 fetch 超时，默认 5 分钟，避免长时间无响应导致 run 级 timeout）
     const fetchTimeoutMs = 300_000;
     const fid = crypto.randomUUID();
-    const parentMessageId: string | null = null;
+    // parentMessageId: use passed param, then stored parentMessageId, then lastFid
+    const parentMessageId = params.parentMessageId ?? this.parentMessageId ?? this.lastFid;
     const responseData = await page.evaluate(
       async ({ baseUrl, chatId, model, message, fid, parentMessageId, timeoutMs }) => {
         let timer: ReturnType<typeof setTimeout> | undefined = undefined;
@@ -355,6 +367,10 @@ export class QwenWebClientBrowser {
         timeoutMs: fetchTimeoutMs,
       },
     );
+
+    // Save fid for conversation tree linking in subsequent requests
+    this.lastFid = fid;
+    this.parentMessageId = fid;
 
     if (!responseData || !responseData.ok) {
       console.error(`[Qwen Web Browser] Request failed`);
