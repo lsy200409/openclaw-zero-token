@@ -393,7 +393,7 @@ export class QwenCNWebClientBrowser {
         input: ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 128000,
-        maxTokens: 4096,
+        maxTokens: 8192,
       },
       {
         id: "Qwen3.5-Turbo",
@@ -404,6 +404,26 @@ export class QwenCNWebClientBrowser {
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 32768,
         maxTokens: 4096,
+      },
+      {
+        id: "Qwen3.5-Max",
+        name: "Qwen 3.5 Max (旗舰版)",
+        api: "qwen-cn-web",
+        reasoning: true,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 128000,
+        maxTokens: 8192,
+      },
+      {
+        id: "Qwen3-Coder",
+        name: "Qwen 3 Coder (代码版)",
+        api: "qwen-cn-web",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 128000,
+        maxTokens: 8192,
       },
     ];
   }

@@ -204,21 +204,24 @@ export class KimiWebClientBrowser {
         kimiAuthToken,
         scenario,
         conversationId,
+        model,
       }: {
         baseUrl: string;
         message: string;
         kimiAuthToken: string;
         scenario: string;
         conversationId: string | null;
+        model: string;
       }) => {
         const req = {
           scenario,
+          conversation_id: conversationId,
           message: {
             role: "user" as const,
             blocks: [{ message_id: "", text: { content: message } }],
             scenario,
           },
-          options: { thinking: false },
+          options: { thinking: model.includes("thinking") || model.includes("k2") },
         };
         const enc = new TextEncoder().encode(JSON.stringify(req));
         const buf = new ArrayBuffer(5 + enc.byteLength);
@@ -301,6 +304,7 @@ export class KimiWebClientBrowser {
         message: params.message,
         kimiAuthToken: authToken,
         conversationId,
+        model: params.model,
         scenario: params.model.includes("search")
           ? "SCENARIO_SEARCH"
           : params.model.includes("research")
@@ -343,13 +347,43 @@ export class KimiWebClientBrowser {
   async discoverModels(): Promise<ModelDefinitionConfig[]> {
     return [
       {
-        id: "moonshot-v1-32k",
-        name: "Moonshot v1 32K",
+        id: "kimi-k2",
+        name: "Kimi K2 (Thinking)",
+        api: "kimi-web",
+        reasoning: true,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 128000,
+        maxTokens: 8192,
+      },
+      {
+        id: "kimi-thinking",
+        name: "Kimi Thinking",
+        api: "kimi-web",
+        reasoning: true,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 128000,
+        maxTokens: 8192,
+      },
+      {
+        id: "kimi-search",
+        name: "Kimi Search (联网搜索)",
         api: "kimi-web",
         reasoning: false,
         input: ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-        contextWindow: 32000,
+        contextWindow: 128000,
+        maxTokens: 4096,
+      },
+      {
+        id: "kimi-fast",
+        name: "Kimi Fast",
+        api: "kimi-web",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 128000,
         maxTokens: 4096,
       },
     ] as ModelDefinitionConfig[];

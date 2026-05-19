@@ -70,6 +70,11 @@ Worker 文档: workspace/{平台名}/WORKER.md
 
 const FORMAT_RULE = `## Output Format - MANDATORY
 - To call a tool: \`\`\`tool_json\n{"tool":"name","parameters":{...}}\n\`\`\`
+- Call MULTIPLE tools in one response: separate each with a newline
+  \`\`\`tool_json
+  {"tool":"read","parameters":{"path":"workspace/MEMORY.md"}}
+  {"tool":"exec","parameters":{"command":"ls workspace/"}}
+  \`\`\`
 - NEVER use XML tags (<invoke>, <function_calls>, etc.)
 - NO extra text around the tool_json block
 - No tool needed? Reply with text only.`;
@@ -84,11 +89,22 @@ const EN_STRICT_TEMPLATE = `${EN_TEMPLATE}
 
 STRICT: Absolutely no text outside tool_json block.`;
 
+const FORMAT_RULE_CN = `## 输出格式 - 必须遵守
+- 调用单个工具: \`\`\`tool_json\n{"tool":"名称","parameters":{...}}\n\`\`\`
+- 一次可调用多个工具，每个 tool_json 之间用换行分隔
+  \`\`\`tool_json
+  {"tool":"read","parameters":{"path":"workspace/MEMORY.md"}}
+  {"tool":"exec","parameters":{"command":"ls workspace/"}}
+  \`\`\`
+- 禁止使用 XML 标签（如 <invoke> <function_calls> 等）
+- tool_json 代码块外不要写任何多余文本
+- 不需要调用工具时，直接回复文本即可。`;
+
 const CN_TEMPLATE = `工作区目录: workspace/
 
 ${CORE_TOOLS_CN}
 
-${FORMAT_RULE}`;
+${FORMAT_RULE_CN}`;
 
 /** No web models skip prompt injection — web interfaces don't pass native tools.
  *  Even DeepSeek/Claude/GLM need prompt injection when accessed via browser. */

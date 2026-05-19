@@ -405,13 +405,33 @@ export class DoubaoWebClientBrowser {
     return [
       {
         id: "doubao-seed-2.0",
-        name: "Doubao-Seed 2.0",
+        name: "Doubao Seed 2.0 (旗舰)",
         api: "doubao-web",
         reasoning: true,
         input: ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-        contextWindow: 64000,
+        contextWindow: 128000,
         maxTokens: 8192,
+      },
+      {
+        id: "doubao-1.5-pro",
+        name: "Doubao 1.5 Pro",
+        api: "doubao-web",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 128000,
+        maxTokens: 8192,
+      },
+      {
+        id: "doubao-1.5-thinking-pro",
+        name: "Doubao 1.5 Thinking Pro",
+        api: "doubao-web",
+        reasoning: true,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 128000,
+        maxTokens: 4096,
       },
     ];
   }

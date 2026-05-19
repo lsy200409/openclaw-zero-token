@@ -360,6 +360,8 @@ export function createQwenWebStreamFn(cookieOrJson: string): StreamFn {
           checkTags();
         };
 
+        let lastResponseId: string | null = null;
+
         const processLine = (line: string) => {
           if (!line || !line.startsWith("data:")) {
             return;
@@ -373,12 +375,15 @@ export function createQwenWebStreamFn(cookieOrJson: string): StreamFn {
           try {
             const data = JSON.parse(dataStr);
 
-            // Extract conversation ID
             if (data.sessionId || data.conversationId) {
               conversationMap.set(providerKey, data.sessionId || data.conversationId);
             }
 
-            // Extract content delta - Qwen v2 uses choices[0].delta.content
+            const rc = data["response.created"];
+            if (rc?.response_id) {
+              lastResponseId = rc.response_id;
+            }
+
             const delta =
               data.choices?.[0]?.delta?.content ?? data.text ?? data.content ?? data.delta;
             if (typeof delta === "string" && delta) {
@@ -423,7 +428,13 @@ export function createQwenWebStreamFn(cookieOrJson: string): StreamFn {
           `[QwenWebStream] Stream completed. Parts: ${contentParts.length}, Tools: ${accumulatedToolCalls.length}`,
         );
 
-        // Sync client's chat_id back to conversation map
+        if (lastResponseId) {
+          client.setParentMessageId(lastResponseId);
+          console.log(
+            `[QwenWebStream] Updated parentMessageId from Qwen response: ${lastResponseId}`,
+          );
+        }
+
         const clientConvId = client.getConversationId();
         if (clientConvId) {
           conversationMap.set(providerKey, clientConvId);

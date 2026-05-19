@@ -52,7 +52,7 @@ export function createKimiWebStreamFn(cookieOrJson: string): StreamFn {
                 }
               }
             }
-            prompt = `\n<tool_response id="${tr.toolCallId}" name="${tr.toolName}">\n${resultText}\n</tool_response>\n\nPlease proceed based on this tool result.`;
+            prompt = `\n<tool_response id="${tr.toolCallId}" name="${tr.toolName}">\n${resultText}\n</tool_response>\n\n请根据工具执行结果继续回复。`;
           } else {
             const lastUserMessage = [...messages].toReversed().find((m) => m.role === "user");
             if (lastUserMessage) {

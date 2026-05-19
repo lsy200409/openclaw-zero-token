@@ -340,7 +340,10 @@ const KNOWN_WEB_MODEL_ENTRIES: ModelCatalogEntry[] = [
   // chatgpt-web
   { id: "gpt-4", name: "ChatGPT Web", provider: "chatgpt-web", contextWindow: 128000 },
   // doubao-web
-  { id: "doubao-seed-2.0", name: "Doubao Browser", provider: "doubao-web", contextWindow: 64000 },
+  { id: "doubao-seed-2.0", name: "Doubao Seed 2.0", provider: "doubao-web", contextWindow: 128000, reasoning: true },
+  { id: "doubao-pro", name: "Doubao Pro", provider: "doubao-web", contextWindow: 128000 },
+  { id: "doubao-1.5-pro", name: "Doubao 1.5 Pro", provider: "doubao-web", contextWindow: 128000 },
+  { id: "doubao-1.5-thinking-pro", name: "Doubao 1.5 Thinking Pro", provider: "doubao-web", contextWindow: 128000, reasoning: true },
   // gemini-web
   { id: "gemini-pro", name: "Gemini Pro", provider: "gemini-web", contextWindow: 32000 },
   { id: "gemini-ultra", name: "Gemini Ultra", provider: "gemini-web", contextWindow: 32000 },
@@ -358,7 +361,10 @@ const KNOWN_WEB_MODEL_ENTRIES: ModelCatalogEntry[] = [
   // grok-web
   { id: "grok-2", name: "Grok Web", provider: "grok-web", contextWindow: 32000 },
   // kimi-web
-  { id: "moonshot-v1-32k", name: "Kimi Web", provider: "kimi-web", contextWindow: 32000 },
+  { id: "kimi-k2", name: "Kimi K2", provider: "kimi-web", contextWindow: 128000, reasoning: true },
+  { id: "kimi-thinking", name: "Kimi Thinking", provider: "kimi-web", contextWindow: 128000, reasoning: true },
+  { id: "kimi-search", name: "Kimi Search", provider: "kimi-web", contextWindow: 128000 },
+  { id: "kimi-fast", name: "Kimi Fast", provider: "kimi-web", contextWindow: 128000 },
   // perplexity-web
   {
     id: "perplexity-web",
@@ -367,9 +373,14 @@ const KNOWN_WEB_MODEL_ENTRIES: ModelCatalogEntry[] = [
     contextWindow: 128000,
   },
   // qwen-web
-  { id: "qwen-max", name: "Qwen Web", provider: "qwen-web", contextWindow: 32000 },
+  { id: "qwen3.5-plus", name: "Qwen 3.5 Plus", provider: "qwen-web", contextWindow: 128000 },
+  { id: "qwen3-coder-plus", name: "Qwen 3 Coder Plus", provider: "qwen-web", contextWindow: 128000 },
+  { id: "qwen3.5-max", name: "Qwen 3.5 Max", provider: "qwen-web", contextWindow: 128000, reasoning: true },
   // qwen-cn-web
-  { id: "qwen-turbo", name: "Qwen CN Web", provider: "qwen-cn-web", contextWindow: 128000 },
+  { id: "Qwen3.5-Plus", name: "Qwen 3.5 Plus (国内版)", provider: "qwen-cn-web", contextWindow: 128000 },
+  { id: "Qwen3.5-Turbo", name: "Qwen 3.5 Turbo (国内版)", provider: "qwen-cn-web", contextWindow: 32768 },
+  { id: "Qwen3.5-Max", name: "Qwen 3.5 Max (国内版)", provider: "qwen-cn-web", contextWindow: 128000, reasoning: true },
+  { id: "Qwen3-Coder", name: "Qwen 3 Coder (国内版)", provider: "qwen-cn-web", contextWindow: 128000 },
   // xiaomimo-web
   { id: "xiaomimo-chat", name: "Xiaomi Mimo Web", provider: "xiaomimo-web", contextWindow: 128000 },
 ];
