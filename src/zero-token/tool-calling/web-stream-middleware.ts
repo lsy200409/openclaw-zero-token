@@ -36,9 +36,10 @@ function nextSubSessionKey(parentKey: string): string {
   return `${parentKey}:tool-round-${subSessionCounter}`;
 }
 
-const MEMORY_WORKSPACE = process.env.HOME
-  ? `${process.env.HOME}/.openclaw-zero/workspace`
-  : "/tmp/openclaw-workspace";
+function resolveMemoryWorkspace(api: string): string {
+  const base = process.env.HOME ? `${process.env.HOME}/.openclaw-zero` : "/tmp/openclaw-zero";
+  return `${base}/workspace-${api}`;
+}
 
 /**
  * Known tool parameter names for each registered web tool.
@@ -144,20 +145,18 @@ function classifyToolErrorWithGuidance(resultText: string): {
 function resolveMemoryTool(
   tool: string,
   params: Record<string, string>,
+  api: string,
 ): { name: string; params: Record<string, string> } {
+  const ws = resolveMemoryWorkspace(api);
   if (tool === "memory_read") {
-    const query = params.query || "";
-    const path = query ? `${MEMORY_WORKSPACE}/MEMORY.md` : `${MEMORY_WORKSPACE}/MEMORY.md`;
+    const path = `${ws}/MEMORY.md`;
     return { name: "read", params: { path } };
   }
   if (tool === "memory_write") {
     const key = params.key || "memory";
     const value = params.value || "";
     const content = `\n## ${key}\n${value}\n\n`;
-    return {
-      name: "write",
-      params: { path: `${MEMORY_WORKSPACE}/MEMORY.md`, content },
-    };
+    return { name: "write", params: { path: `${ws}/MEMORY.md`, content } };
   }
   return { name: tool, params };
 }
@@ -513,7 +512,7 @@ CRITICAL: If the task is NOT COMPLETE, you MUST call another tool NOW. Reply wit
                   );
 
                   const toolId = `web_tool_${Date.now()}_${i}`;
-                  const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams);
+                  const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams, api);
                   console.log(
                     `[WebStreamMiddleware] FEEDBACK TOOL DETECTED[${i + 1}/${toolCalls.length}]: ${tc.toolCall.tool}${resolved.name !== tc.toolCall.tool ? ` → ${resolved.name}` : ""}`,
                   );
@@ -700,7 +699,7 @@ CRITICAL: If the task is NOT COMPLETE, you MUST call another tool NOW. Reply wit
                   );
 
                   const toolId = `web_tool_${Date.now()}_${i}`;
-                  const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams);
+                  const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams, api);
                   console.log(
                     `[WebStreamMiddleware] DETECTED (no-inject)[${i + 1}/${toolCalls.length}]: ${tc.toolCall.tool}${resolved.name !== tc.toolCall.tool ? ` → ${resolved.name}` : ""}`,
                   );
@@ -815,7 +814,7 @@ CRITICAL: If the task is NOT COMPLETE, you MUST call another tool NOW. Reply wit
                 );
 
                 const toolId = `web_tool_${Date.now()}_${i}`;
-                const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams);
+                const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams, api);
                 console.log(
                   `[WebStreamMiddleware] TOOL DETECTED[${i + 1}/${toolCalls.length}]: ${tc.toolCall.tool}${resolved.name !== tc.toolCall.tool ? ` → ${resolved.name}` : ""}`,
                 );
