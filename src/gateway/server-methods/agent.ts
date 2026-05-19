@@ -445,7 +445,7 @@ export const agentHandlers: GatewayRequestHandlers = {
         // reset first, then run a fresh-session greeting prompt in-place.
         // Date is embedded in the prompt so agents read the correct daily
         // memory files; skip further timestamp injection to avoid duplication.
-        message = buildBareSessionResetPrompt(cfg);
+        message = buildBareSessionResetPrompt(cfg, undefined, agentIdRaw);
         skipTimestampInjection = true;
       }
     }

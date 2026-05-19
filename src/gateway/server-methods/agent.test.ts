@@ -893,7 +893,7 @@ describe("gateway agent handler", () => {
     expect(mocks.performGatewaySessionReset).toHaveBeenCalledTimes(1);
     const call = readLastAgentCommandCall();
     // Message is now dynamically built with current date — check key substrings
-    expect(call?.message).toContain("Run your Session Startup sequence");
+    expect(call?.message).toContain("会话初始化程序");
     expect(call?.message).toContain("Current time:");
     expect(call?.message).not.toBe(BARE_SESSION_RESET_PROMPT);
     expect(call?.sessionId).toBe("reset-session-id");
