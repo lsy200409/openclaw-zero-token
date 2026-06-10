@@ -17,7 +17,7 @@ import {
   type ToolCall,
 } from "@mariozechner/pi-ai";
 import { stripInboundMeta } from "../streams/strip-inbound-meta.js";
-import { extractAllToolCalls } from "./web-tool-parser.js";
+import { extractAllToolCalls, type ToolCallParseResult } from "./web-tool-parser.js";
 import { shouldInjectToolPrompt, getToolPrompt } from "./web-tool-prompt.js";
 
 const DEFAULT_USAGE = {
@@ -49,13 +49,20 @@ function resolveMemoryWorkspace(api: string): string {
 const KNOWN_TOOL_PARAMS: Record<string, Set<string>> = {
   web_search: new Set(["query"]),
   web_fetch: new Set(["url"]),
-  exec: new Set(["command"]),
+  exec: new Set(["command", "workdir", "env", "timeout", "background", "yieldMs", "pty"]),
   read: new Set(["path"]),
   write: new Set(["path", "content"]),
+  edit: new Set(["path", "old_string", "new_string"]),
   message: new Set(["text", "channel"]),
   memory_read: new Set(["query"]),
   memory_write: new Set(["key", "value"]),
+  process: new Set(["action", "sessionId", "input"]),
+  sessions_spawn: new Set(["prompt", "model"]),
+  agents_list: new Set([]),
 };
+
+/** Set of all known tool names for validation. */
+const KNOWN_TOOL_NAMES = new Set(Object.keys(KNOWN_TOOL_PARAMS));
 
 function stripUnknownParams(tool: string, params: Record<string, string>): Record<string, string> {
   const allowed = KNOWN_TOOL_PARAMS[tool];
@@ -73,6 +80,7 @@ function stripUnknownParams(tool: string, params: Record<string, string>): Recor
 
 /**
  * Classify a tool result text into an error category with guidance.
+ * Provides actionable suggestions so the AI can adjust its strategy.
  */
 function classifyToolErrorWithGuidance(resultText: string): {
   hasError: boolean;
@@ -96,7 +104,14 @@ function classifyToolErrorWithGuidance(resultText: string): {
     lower.includes("eisdir") ||
     lower.includes("syntaxerror") ||
     lower.includes("typeerror") ||
-    lower.includes("referenceerror");
+    lower.includes("referenceerror") ||
+    lower.includes("command not found") ||
+    lower.includes("no such file") ||
+    lower.includes("is a directory") ||
+    lower.includes("segmentation fault") ||
+    lower.includes("core dumped") ||
+    lower.includes("killed") ||
+    lower.includes("out of memory");
 
   if (!hasError) {
     return { hasError: false, guidance: "" };
@@ -105,10 +120,16 @@ function classifyToolErrorWithGuidance(resultText: string): {
   let guidance = "";
 
   if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout")) {
-    guidance = "\n\n⏱ 命令执行超时。请尝试：1) 简化命令 2) 拆分为多个小步骤 3) 使用后台运行 (&)";
-  } else if (lower.includes("enoent") || lower.includes("not found") || lower.includes("找不到")) {
     guidance =
-      "\n\n📂 文件或命令不存在。请尝试：1) 检查路径拼写 2) 使用 read 或 exec(ls) 查看目录内容 3) 确认软件已安装";
+      "\n\n⏱ 命令执行超时。请尝试：1) 简化命令 2) 拆分为多个小步骤 3) 添加 timeout 参数（如 exec timeout=300）4) 使用 background=true 后台运行";
+  } else if (
+    lower.includes("enoent") ||
+    lower.includes("not found") ||
+    lower.includes("找不到") ||
+    lower.includes("no such file")
+  ) {
+    guidance =
+      "\n\n📂 文件或命令不存在。请尝试：1) 检查路径拼写 2) 使用 exec 执行 ls 或 find 查看目录内容 3) 确认软件已安装（which <command>）4) 检查是否在正确的工作目录";
   } else if (
     lower.includes("eacces") ||
     lower.includes("permission") ||
@@ -116,7 +137,8 @@ function classifyToolErrorWithGuidance(resultText: string): {
     lower.includes("权限") ||
     lower.includes("拒绝")
   ) {
-    guidance = "\n\n🔒 权限不足。请尝试：1) 使用其他路径 2) 用 ls -la 查看权限 3) 选择可访问的目录";
+    guidance =
+      "\n\n🔒 权限不足。请尝试：1) 使用其他路径 2) 用 ls -la 查看权限 3) 选择可访问的目录 4) 检查文件是否需要执行权限（chmod +x）";
   } else if (lower.includes("eisdir") || lower.includes("is a directory")) {
     guidance = "\n\n📁 指定的是目录而非文件。请添加文件名或使用 ls 列出目录内容";
   } else if (
@@ -124,22 +146,54 @@ function classifyToolErrorWithGuidance(resultText: string): {
     lower.includes("typeerror") ||
     lower.includes("referenceerror")
   ) {
-    guidance = "\n\n🐛 脚本/代码执行错误。请尝试：1) 检查代码语法 2) 查看错误行号 3) 修改后重试";
+    guidance =
+      "\n\n🐛 脚本/代码执行错误。请尝试：1) 检查代码语法 2) 查看错误行号 3) 修改后重试 4) 使用更简单的语法或命令";
   } else if (
     lower.includes("exit code") ||
     lower.includes("exit code 1") ||
     lower.includes("exit code 2")
   ) {
     guidance =
-      "\n\n⚠️ 命令以非零退出码结束。请尝试：1) 单独执行各步骤定位问题 2) 检查输入参数 3) 查阅相关文档";
+      "\n\n⚠️ 命令以非零退出码结束。请尝试：1) 单独执行各步骤定位问题 2) 检查输入参数 3) 查阅相关文档 4) 使用 echo 或 printf 调试变量值";
   } else if (lower.includes("rate limit") || lower.includes("429") || lower.includes("too many")) {
     guidance = "\n\n🔄 请求频率过高被限流。请等待几秒后重试";
+  } else if (lower.includes("segmentation fault") || lower.includes("core dumped")) {
+    guidance =
+      "\n\n💥 程序崩溃（段错误）。请尝试：1) 简化输入数据 2) 检查内存使用 3) 使用更稳定的替代命令";
+  } else if (lower.includes("killed") || lower.includes("out of memory")) {
+    guidance =
+      "\n\n💀 进程被终止（可能内存不足）。请尝试：1) 减少处理数据量 2) 分批处理 3) 使用更轻量的命令";
+  } else if (lower.includes("command not found")) {
+    guidance =
+      "\n\n❓ 命令未找到。请尝试：1) 确认命令名称拼写 2) 执行 which <command> 检查是否安装 3) 使用 apt/brew/pip 安装所需工具 4) 使用替代命令";
   } else {
     guidance =
-      "\n\n❓ 工具调用遇到未知错误。请尝试：1) 换一种方式实现 2) 拆分为更小的步骤 3) 使用 read 查阅相关文档或手册";
+      "\n\n❓ 工具调用遇到未知错误。请尝试：1) 换一种方式实现 2) 拆分为更小的步骤 3) 使用 read 查阅相关文档或手册 4) 使用更简单的命令";
   }
 
   return { hasError: true, guidance };
+}
+
+/**
+ * Build feedback for an unknown tool name, suggesting available alternatives.
+ */
+function buildUnknownToolFeedback(toolName: string): string {
+  const suggestions: string[] = [];
+
+  // Find similar tool names
+  const lowerName = toolName.toLowerCase();
+  for (const known of KNOWN_TOOL_NAMES) {
+    if (known.includes(lowerName) || lowerName.includes(known)) {
+      suggestions.push(known);
+    }
+  }
+
+  // If no similar names found, suggest core tools
+  if (suggestions.length === 0) {
+    suggestions.push("exec", "read", "write");
+  }
+
+  return `❌ 未知工具: "${toolName}"。可用的工具包括: ${[...KNOWN_TOOL_NAMES].join(", ")}。\n您是否想使用: ${suggestions.join(", ")}？\n请使用正确的工具名重新调用。`;
 }
 
 function resolveMemoryTool(
@@ -159,6 +213,89 @@ function resolveMemoryTool(
     return { name: "write", params: { path: `${ws}/MEMORY.md`, content } };
   }
   return { name: tool, params };
+}
+
+/**
+ * Validate a parsed tool call and return feedback if invalid.
+ * Returns null if the tool call is valid, or a feedback string if invalid.
+ */
+function validateToolCall(toolName: string, params: Record<string, string>): string | null {
+  // Check if tool name is known
+  if (
+    !KNOWN_TOOL_NAMES.has(toolName) &&
+    toolName !== "memory_read" &&
+    toolName !== "memory_write"
+  ) {
+    return buildUnknownToolFeedback(toolName);
+  }
+
+  // Validate exec tool has a command
+  if (toolName === "exec" && !params.command?.trim()) {
+    return '❌ exec 工具缺少 command 参数。请提供要执行的命令。示例: {"tool":"exec","parameters":{"command":"ls -la"}}';
+  }
+
+  // Validate read tool has a path
+  if (toolName === "read" && !params.path?.trim()) {
+    return '❌ read 工具缺少 path 参数。请提供文件路径。示例: {"tool":"read","parameters":{"path":"/path/to/file"}}';
+  }
+
+  // Validate write tool has path and content
+  if (toolName === "write" && (!params.path?.trim() || params.content === undefined)) {
+    return '❌ write 工具缺少 path 或 content 参数。示例: {"tool":"write","parameters":{"path":"/path/to/file","content":"内容"}}';
+  }
+
+  return null;
+}
+
+/**
+ * Process parsed tool calls: validate, resolve, and convert to ToolCall objects.
+ * Returns validated tool call parts and any validation errors.
+ */
+function processToolCalls(
+  toolCalls: ToolCallParseResult[],
+  api: string,
+  logPrefix: string,
+): { toolCallParts: ToolCall[]; validationErrors: string[] } {
+  const toolCallParts: ToolCall[] = [];
+  const validationErrors: string[] = [];
+
+  for (let i = 0; i < toolCalls.length; i++) {
+    const tc = toolCalls[i];
+    if (!tc.toolCall) {
+      continue;
+    }
+
+    const safeParams = stripUnknownParams(
+      tc.toolCall.tool,
+      (tc.toolCall.parameters || {}) as Record<string, string>,
+    );
+
+    // Validate the tool call before proceeding
+    const validationError = validateToolCall(tc.toolCall.tool, safeParams);
+    if (validationError) {
+      console.warn(
+        `[WebStreamMiddleware] ${logPrefix} VALIDATION FAILED[${i + 1}/${toolCalls.length}]: ${tc.toolCall.tool} - ${validationError}`,
+      );
+      validationErrors.push(validationError);
+      continue;
+    }
+
+    const toolId = `web_tool_${Date.now()}_${i}`;
+    const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams, api);
+    console.log(
+      `[WebStreamMiddleware] ${logPrefix} TOOL DETECTED[${i + 1}/${toolCalls.length}]: ${tc.toolCall.tool}${resolved.name !== tc.toolCall.tool ? ` → ${resolved.name}` : ""}`,
+    );
+
+    const toolCallPart: ToolCall = {
+      type: "toolCall",
+      id: toolId,
+      name: resolved.name,
+      arguments: resolved.params,
+    };
+    toolCallParts.push(toolCallPart);
+  }
+
+  return { toolCallParts, validationErrors };
 }
 
 /**
@@ -497,37 +634,39 @@ CRITICAL: If the task is NOT COMPLETE, you MUST call another tool NOW. Reply wit
               const toolCalls = extractAllToolCalls(accumulatedText);
 
               if (toolCalls.length > 0) {
-                const toolCallParts: ToolCall[] = [];
+                const { toolCallParts, validationErrors } = processToolCalls(
+                  toolCalls,
+                  api,
+                  "FEEDBACK",
+                );
 
-                for (let i = 0; i < toolCalls.length; i++) {
-                  const tc = toolCalls[i];
-                  if (!tc.toolCall) {
-                    continue;
-                  }
-
-                  // Strip unknown params that may confuse tool schema validation
-                  const safeParams = stripUnknownParams(
-                    tc.toolCall.tool,
-                    (tc.toolCall.parameters || {}) as Record<string, string>,
-                  );
-
-                  const toolId = `web_tool_${Date.now()}_${i}`;
-                  const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams, api);
-                  console.log(
-                    `[WebStreamMiddleware] FEEDBACK TOOL DETECTED[${i + 1}/${toolCalls.length}]: ${tc.toolCall.tool}${resolved.name !== tc.toolCall.tool ? ` → ${resolved.name}` : ""}`,
-                  );
-
-                  const toolCallPart: ToolCall = {
-                    type: "toolCall",
-                    id: toolId,
-                    name: resolved.name,
-                    arguments: resolved.params,
+                // If all tool calls failed validation, return validation errors as feedback
+                if (toolCallParts.length === 0 && validationErrors.length > 0) {
+                  const errorFeedback = validationErrors.join("\n\n");
+                  const errorText: TextContent = {
+                    type: "text",
+                    text: `Tool call validation failed:\n\n${errorFeedback}\n\nPlease correct the tool call and try again.`,
                   };
-                  toolCallParts.push(toolCallPart);
+                  const errorMsg: AssistantMessage = {
+                    role: "assistant",
+                    content: [errorText],
+                    stopReason: "stop",
+                    api: model.api,
+                    provider: model.provider,
+                    model: model.id,
+                    usage: finalMsg?.usage ?? DEFAULT_USAGE,
+                    timestamp: Date.now(),
+                  };
+                  wrappedStream.push({ type: "done", reason: "stop" as const, message: errorMsg });
+                  wrappedStream.end();
+                  return;
+                }
 
+                for (let i = 0; i < toolCallParts.length; i++) {
+                  const toolCallPart = toolCallParts[i];
                   const partialToolMsg: AssistantMessage = {
                     role: "assistant",
-                    content: [...toolCallParts],
+                    content: toolCallParts.slice(0, i + 1),
                     stopReason: "toolUse",
                     api: model.api,
                     provider: model.provider,
@@ -685,36 +824,39 @@ CRITICAL: If the task is NOT COMPLETE, you MUST call another tool NOW. Reply wit
               );
 
               if (toolCalls.length > 0) {
-                const toolCallParts: ToolCall[] = [];
+                const { toolCallParts, validationErrors } = processToolCalls(
+                  toolCalls,
+                  api,
+                  "NO-INJECT",
+                );
 
-                for (let i = 0; i < toolCalls.length; i++) {
-                  const tc = toolCalls[i];
-                  if (!tc.toolCall) {
-                    continue;
-                  }
-
-                  const safeParams = stripUnknownParams(
-                    tc.toolCall.tool,
-                    (tc.toolCall.parameters || {}) as Record<string, string>,
-                  );
-
-                  const toolId = `web_tool_${Date.now()}_${i}`;
-                  const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams, api);
-                  console.log(
-                    `[WebStreamMiddleware] DETECTED (no-inject)[${i + 1}/${toolCalls.length}]: ${tc.toolCall.tool}${resolved.name !== tc.toolCall.tool ? ` → ${resolved.name}` : ""}`,
-                  );
-
-                  const toolCallPart: ToolCall = {
-                    type: "toolCall",
-                    id: toolId,
-                    name: resolved.name,
-                    arguments: resolved.params,
+                // If all tool calls failed validation, return validation errors as feedback
+                if (toolCallParts.length === 0 && validationErrors.length > 0) {
+                  const errorFeedback = validationErrors.join("\n\n");
+                  const errorText: TextContent = {
+                    type: "text",
+                    text: `Tool call validation failed:\n\n${errorFeedback}\n\nPlease correct the tool call and try again.`,
                   };
-                  toolCallParts.push(toolCallPart);
+                  const errorMsg: AssistantMessage = {
+                    role: "assistant",
+                    content: [errorText],
+                    stopReason: "stop",
+                    api: model.api,
+                    provider: model.provider,
+                    model: model.id,
+                    usage: finalMsg?.usage ?? DEFAULT_USAGE,
+                    timestamp: Date.now(),
+                  };
+                  passWrapped.push({ type: "done", reason: "stop" as const, message: errorMsg });
+                  passWrapped.end();
+                  return;
+                }
 
+                for (let i = 0; i < toolCallParts.length; i++) {
+                  const toolCallPart = toolCallParts[i];
                   const partialToolMsg: AssistantMessage = {
                     role: "assistant",
-                    content: [...toolCallParts],
+                    content: toolCallParts.slice(0, i + 1),
                     stopReason: "toolUse",
                     api: model.api,
                     provider: model.provider,
@@ -800,36 +942,56 @@ CRITICAL: If the task is NOT COMPLETE, you MUST call another tool NOW. Reply wit
 
             if (toolCalls.length > 0) {
               toolCallEmitted = true;
-              const toolCallParts: ToolCall[] = [];
+              const { toolCallParts, validationErrors } = processToolCalls(toolCalls, api, "MAIN");
 
-              for (let i = 0; i < toolCalls.length; i++) {
-                const tc = toolCalls[i];
-                if (!tc.toolCall) {
-                  continue;
+              // If all tool calls failed validation, return validation errors as feedback
+              if (toolCallParts.length === 0 && validationErrors.length > 0) {
+                const errorFeedback = validationErrors.join("\n\n");
+                const errorText: TextContent = {
+                  type: "text",
+                  text: `Tool call validation failed:\n\n${errorFeedback}\n\nPlease correct the tool call and try again.`,
+                };
+                const errorMsg: AssistantMessage = {
+                  role: "assistant",
+                  content: [errorText],
+                  stopReason: "stop",
+                  api: model.api,
+                  provider: model.provider,
+                  model: model.id,
+                  usage: finalMsg?.usage ?? DEFAULT_USAGE,
+                  timestamp: Date.now(),
+                };
+                wrappedStream.push({ type: "done", reason: "stop" as const, message: errorMsg });
+              } else {
+                for (let i = 0; i < toolCallParts.length; i++) {
+                  const toolCallPart = toolCallParts[i];
+                  const partialToolMsg: AssistantMessage = {
+                    role: "assistant",
+                    content: toolCallParts.slice(0, i + 1),
+                    stopReason: "toolUse",
+                    api: model.api,
+                    provider: model.provider,
+                    model: model.id,
+                    usage: finalMsg?.usage ?? DEFAULT_USAGE,
+                    timestamp: Date.now(),
+                  };
+
+                  wrappedStream.push({
+                    type: "toolcall_start",
+                    contentIndex: i,
+                    partial: partialToolMsg,
+                  });
+                  wrappedStream.push({
+                    type: "toolcall_end",
+                    contentIndex: i,
+                    toolCall: toolCallPart,
+                    partial: partialToolMsg,
+                  });
                 }
 
-                const safeParams = stripUnknownParams(
-                  tc.toolCall.tool,
-                  (tc.toolCall.parameters || {}) as Record<string, string>,
-                );
-
-                const toolId = `web_tool_${Date.now()}_${i}`;
-                const resolved = resolveMemoryTool(tc.toolCall.tool, safeParams, api);
-                console.log(
-                  `[WebStreamMiddleware] TOOL DETECTED[${i + 1}/${toolCalls.length}]: ${tc.toolCall.tool}${resolved.name !== tc.toolCall.tool ? ` → ${resolved.name}` : ""}`,
-                );
-
-                const toolCallPart: ToolCall = {
-                  type: "toolCall",
-                  id: toolId,
-                  name: resolved.name,
-                  arguments: resolved.params,
-                };
-                toolCallParts.push(toolCallPart);
-
-                const partialToolMsg: AssistantMessage = {
+                const finalToolMsg: AssistantMessage = {
                   role: "assistant",
-                  content: [...toolCallParts],
+                  content: toolCallParts,
                   stopReason: "toolUse",
                   api: model.api,
                   provider: model.provider,
@@ -837,35 +999,12 @@ CRITICAL: If the task is NOT COMPLETE, you MUST call another tool NOW. Reply wit
                   usage: finalMsg?.usage ?? DEFAULT_USAGE,
                   timestamp: Date.now(),
                 };
-
                 wrappedStream.push({
-                  type: "toolcall_start",
-                  contentIndex: i,
-                  partial: partialToolMsg,
-                });
-                wrappedStream.push({
-                  type: "toolcall_end",
-                  contentIndex: i,
-                  toolCall: toolCallPart,
-                  partial: partialToolMsg,
+                  type: "done",
+                  reason: "toolUse",
+                  message: finalToolMsg,
                 });
               }
-
-              const finalToolMsg: AssistantMessage = {
-                role: "assistant",
-                content: toolCallParts,
-                stopReason: "toolUse",
-                api: model.api,
-                provider: model.provider,
-                model: model.id,
-                usage: finalMsg?.usage ?? DEFAULT_USAGE,
-                timestamp: Date.now(),
-              };
-              wrappedStream.push({
-                type: "done",
-                reason: "toolUse",
-                message: finalToolMsg,
-              });
             } else {
               // No tool call — forward the done event as-is
               wrappedStream.push(event);

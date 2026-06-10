@@ -169,6 +169,15 @@ export class GatewayClient {
   private lastTick: number | null = null;
   private tickIntervalMs = 30_000;
   private tickTimer: NodeJS.Timeout | null = null;
+  /** Timestamp of last non-tick activity (conversation, tool call, stream data). */
+  private lastConversationActivity: number | null = null;
+  /** How long after last conversation activity before we consider the session idle.
+   *  During active conversations, the tick timeout is extended. */
+  private readonly conversationActivityIdleMs = 120_000;
+  /** Extra tolerance multiplier applied when conversation is active. */
+  private readonly conversationActivityTolerance = 2.0;
+  /** Whether a soft probe has been sent during the current miss streak. */
+  private tickSoftProbeSent = false;
   private readonly requestTimeoutMs: number;
   private pendingStop: PendingStop | null = null;
 
@@ -675,6 +684,11 @@ export class GatewayClient {
         }
         if (evt.event === "tick") {
           this.lastTick = Date.now();
+        } else {
+          // Non-tick events indicate active conversation — record activity
+          // to extend tick timeout tolerance and prevent premature disconnect.
+          this.lastConversationActivity = Date.now();
+          this.tickSoftProbeSent = false;
         }
         this.opts.onEvent?.(evt);
         return;
@@ -760,6 +774,23 @@ export class GatewayClient {
     this.pending.clear();
   }
 
+  /** Whether the session has had recent conversation activity. */
+  private isConversationActive(): boolean {
+    if (this.lastConversationActivity === null) {
+      return false;
+    }
+    return Date.now() - this.lastConversationActivity < this.conversationActivityIdleMs;
+  }
+
+  /** Effective tick timeout, extended when conversation is active. */
+  private getEffectiveTickTimeoutMs(): number {
+    const baseTimeout = this.tickIntervalMs * 2;
+    if (this.isConversationActive()) {
+      return baseTimeout * this.conversationActivityTolerance;
+    }
+    return baseTimeout;
+  }
+
   private startTickWatch() {
     if (this.tickTimer) {
       clearInterval(this.tickTimer);
@@ -778,8 +809,35 @@ export class GatewayClient {
         return;
       }
       const gap = Date.now() - this.lastTick;
-      if (gap > this.tickIntervalMs * 2) {
+      const effectiveTimeout = this.getEffectiveTickTimeoutMs();
+
+      // Graduated response: soft probe before disconnect
+      if (gap > effectiveTimeout) {
+        // If conversation is active, log a warning instead of disconnecting
+        if (this.isConversationActive()) {
+          logDebug(
+            `gateway tick overdue during active conversation (gap=${gap}ms, effectiveTimeout=${effectiveTimeout}ms) — tolerating`,
+          );
+          // Send a soft probe to check if the connection is still alive
+          if (!this.tickSoftProbeSent) {
+            this.tickSoftProbeSent = true;
+            try {
+              this.ws?.ping();
+            } catch {
+              // ping may fail if socket is already closing
+            }
+          }
+          return;
+        }
         this.ws?.close(4000, "tick timeout");
+      } else if (gap > this.tickIntervalMs && !this.tickSoftProbeSent) {
+        // Tick is overdue but within tolerance — send a soft probe
+        this.tickSoftProbeSent = true;
+        try {
+          this.ws?.ping();
+        } catch {
+          // ping may fail if socket is already closing
+        }
       }
     }, interval);
   }

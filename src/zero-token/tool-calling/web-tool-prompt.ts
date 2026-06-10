@@ -6,8 +6,23 @@
 
 const CORE_TOOLS_EN = `## Core Tools
 ### exec — Run shell commands
+Simple command:
 \`\`\`tool_json
 {"tool":"exec","parameters":{"command":"ls -la workspace/"}}
+\`\`\`
+Complex commands (pipes, redirects, chains):
+\`\`\`tool_json
+{"tool":"exec","parameters":{"command":"cat file.txt | grep pattern | sort | head -20"}}
+\`\`\`
+\`\`\`tool_json
+{"tool":"exec","parameters":{"command":"cd workspace && npm install && npm test"}}
+\`\`\`
+\`\`\`tool_json
+{"tool":"exec","parameters":{"command":"find . -name '*.ts' -exec grep -l 'pattern' {} \\\\;"}}
+\`\`\`
+Long-running command with timeout:
+\`\`\`tool_json
+{"tool":"exec","parameters":{"command":"npm run build","timeout":300}}
 \`\`\`
 
 ### read — Read file contents
@@ -38,8 +53,23 @@ Use \`ls workspace/\` to explore. Read docs with \`read\` when needed.`;
 
 const CORE_TOOLS_CN = `## 核心工具
 ### exec — 执行 shell 命令
+简单命令:
 \`\`\`tool_json
 {"tool":"exec","parameters":{"command":"ls -la workspace/"}}
+\`\`\`
+复杂命令（管道、重定向、链式）:
+\`\`\`tool_json
+{"tool":"exec","parameters":{"command":"cat file.txt | grep pattern | sort | head -20"}}
+\`\`\`
+\`\`\`tool_json
+{"tool":"exec","parameters":{"command":"cd workspace && npm install && npm test"}}
+\`\`\`
+\`\`\`tool_json
+{"tool":"exec","parameters":{"command":"find . -name '*.ts' -exec grep -l 'pattern' {} \\\\;"}}
+\`\`\`
+长时间运行的命令（带超时）:
+\`\`\`tool_json
+{"tool":"exec","parameters":{"command":"npm run build","timeout":300}}
 \`\`\`
 
 ### read — 读取文件内容

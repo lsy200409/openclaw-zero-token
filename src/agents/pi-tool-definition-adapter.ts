@@ -87,7 +87,37 @@ function buildToolExecutionErrorResult(params: {
     status: "error",
     tool: params.toolName,
     error: params.message,
+    suggestion: buildErrorSuggestion(params.message),
   });
+}
+
+/**
+ * Build actionable suggestions based on the error message content.
+ * This helps the AI adjust its strategy when a tool call fails.
+ */
+function buildErrorSuggestion(errorMessage: string): string {
+  const lower = errorMessage.toLowerCase();
+
+  if (lower.includes("command not found") || lower.includes("not found")) {
+    return "Try: 1) Check command spelling 2) Run `which <command>` to verify installation 3) Install the tool 4) Use an alternative command";
+  }
+  if (lower.includes("permission") || lower.includes("denied") || lower.includes("eacces")) {
+    return "Try: 1) Use a different path 2) Run `ls -la` to check permissions 3) Use `chmod` if appropriate 4) Choose an accessible directory";
+  }
+  if (lower.includes("timeout") || lower.includes("timed out")) {
+    return "Try: 1) Increase timeout (exec timeout=300) 2) Simplify the command 3) Split into smaller steps 4) Use background=true";
+  }
+  if (lower.includes("no such file") || lower.includes("enoent")) {
+    return "Try: 1) Check the file path 2) Run `ls` to list directory contents 3) Verify the file exists 4) Create the file first if needed";
+  }
+  if (lower.includes("is a directory") || lower.includes("eisdir")) {
+    return "Try: 1) Specify a file name, not a directory 2) Run `ls` to list directory contents 3) Append a filename to the path";
+  }
+  if (lower.includes("syntax") || lower.includes("typeerror") || lower.includes("referenceerror")) {
+    return "Try: 1) Check code syntax 2) Look at the error line number 3) Use simpler syntax 4) Test the command in a shell first";
+  }
+
+  return "Try: 1) Use a different approach 2) Break the task into smaller steps 3) Check the tool parameters 4) Use a simpler command";
 }
 
 function splitToolExecuteArgs(args: ToolExecuteArgsAny): {

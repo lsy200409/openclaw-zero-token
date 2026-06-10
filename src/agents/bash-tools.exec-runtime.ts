@@ -359,19 +359,19 @@ export function formatExecFailureReason(params: {
 }): string {
   switch (params.failureKind) {
     case "shell-command-not-found":
-      return "Command not found";
+      return "Command not found. Suggestions: 1) Check the command name spelling 2) Run `which <command>` to verify it is installed 3) Install the required tool (apt/brew/pip) 4) Use an alternative command that is available";
     case "shell-not-executable":
-      return "Command not executable (permission denied)";
+      return "Command not executable (permission denied). Suggestions: 1) Run `chmod +x <file>` to add execute permission 2) Check if the file is a script with a proper shebang line 3) Use `bash <script>` or `sh <script>` to run it explicitly";
     case "overall-timeout":
       return typeof params.timeoutSec === "number" && params.timeoutSec > 0
-        ? `Command timed out after ${params.timeoutSec} seconds. If this command is expected to take longer, re-run with a higher timeout (e.g., exec timeout=300).`
-        : "Command timed out. If this command is expected to take longer, re-run with a higher timeout (e.g., exec timeout=300).";
+        ? `Command timed out after ${params.timeoutSec} seconds. Suggestions: 1) Increase timeout (e.g., exec timeout=300) 2) Simplify the command 3) Split into smaller steps 4) Use background=true for long-running tasks`
+        : "Command timed out. Suggestions: 1) Add a timeout parameter (e.g., exec timeout=300) 2) Simplify the command 3) Split into smaller steps 4) Use background=true for long-running tasks";
     case "no-output-timeout":
-      return "Command timed out waiting for output";
+      return "Command timed out waiting for output. Suggestions: 1) The command may be waiting for input — provide input via stdin 2) Use pty=true for interactive commands 3) Check if the command is stuck in a loop 4) Add a timeout parameter";
     case "signal":
-      return `Command aborted by signal ${params.exitSignal}`;
+      return `Command aborted by signal ${params.exitSignal}. This usually means the process was killed externally. Suggestions: 1) Check if the system is low on memory (OOM killer) 2) Reduce data processing volume 3) Try a simpler command`;
     case "aborted":
-      return "Command aborted before exit code was captured";
+      return "Command aborted before exit code was captured. Suggestions: 1) The process may have been killed 2) Try running the command again 3) Use a simpler version of the command 4) Check system resources";
   }
 }
 
