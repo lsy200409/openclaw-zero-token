@@ -1,5 +1,5 @@
 {
-  "originHash" : "f9e924b8f470e089aa7091969bba662a5f626f3481c57d9a808cc8d5f434cd9e",
+  "originHash" : "1b6ef5d25b610250fb5725e27d963f04de7564d8906b2c9e84324faf4d2fd4e5",
   "pins" : [
     {
       "identity" : "axorcist",
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle",
       "state" : {
-        "revision" : "066e75a8b3e99962685d6a90cdd5293ebffd9261",
-        "version" : "2.9.1"
+        "revision" : "d46d456107feacc80711b21847b82b07bd9fb46e",
+        "version" : "2.9.3"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log.git",
       "state" : {
-        "revision" : "8c0f217f01000dd30f60d6e536569ad4e74291f9",
-        "version" : "1.11.0"
+        "revision" : "92448c359f00ebe36ae97d3bd9086f13c7692b5a",
+        "version" : "1.13.2"
       }
     },
     {
