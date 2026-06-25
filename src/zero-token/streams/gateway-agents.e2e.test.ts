@@ -6,7 +6,7 @@
 import WebSocket from "ws";
 
 const WS_URL = "ws://127.0.0.1:3002";
-const TOKEN = "62b791625fa441be036acd3c206b7e14e2bb13c803355823";
+const TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || "placeholder-token";
 
 async function wsCall(
   method: string,
@@ -114,7 +114,7 @@ async function runTests() {
       console.log(`  - ${a.id}${a.name ? ` (${a.name})` : ""}`);
     }
 
-    const agentIds = agents.map((a) => a.id);
+    const agentIds = new Set(agents.map((a) => a.id));
     const expected = [
       "main",
       "doubao-web",
@@ -125,7 +125,7 @@ async function runTests() {
     ];
     console.log("");
     for (const id of expected) {
-      const found = agentIds.includes(id);
+      const found = agentIds.has(id);
       console.log(
         found
           ? `  ✅ Agent '${id}' registered`

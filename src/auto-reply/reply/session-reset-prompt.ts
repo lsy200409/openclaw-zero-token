@@ -21,7 +21,7 @@ function buildResetPrompt(workspacePath: string, modelIntro: string): string {
 4. 完成初始化后，回答："记忆恢复完成，我是你的智能助手，请继续下达指令。"`;
 }
 
-const GENERIC_WORKSPACE = "/home/luoshenye/.openclaw-zero/workspace";
+const GENERIC_WORKSPACE = `${process.env.HOME || "~"}/.openclaw-zero/workspace`;
 const GENERIC_INTRO = "你当前运行在默认工作区。";
 
 function resolveModelIntro(agentId: string): string {

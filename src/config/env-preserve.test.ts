@@ -3,13 +3,13 @@ import { restoreEnvVarRefs } from "./env-preserve.js";
 
 describe("restoreEnvVarRefs", () => {
   const env = {
-    ANTHROPIC_API_KEY: "sk-ant-api03-real-key",
-    OPENAI_API_KEY: "sk-openai-real-key",
+    ANTHROPIC_API_KEY: "sk-ant-placeholder-key",
+    OPENAI_API_KEY: "sk-openai-placeholder-key",
     MY_TOKEN: "tok-12345",
   } as unknown as NodeJS.ProcessEnv;
 
   it("restores a simple ${VAR} reference when value matches", () => {
-    const incoming = { apiKey: "sk-ant-api03-real-key" };
+    const incoming = { apiKey: "sk-ant-placeholder-key" };
     const parsed = { apiKey: "${ANTHROPIC_API_KEY}" };
     const result = restoreEnvVarRefs(incoming, parsed, env);
     expect(result).toEqual({ apiKey: "${ANTHROPIC_API_KEY}" });
@@ -26,8 +26,8 @@ describe("restoreEnvVarRefs", () => {
     const incoming = {
       models: {
         providers: {
-          anthropic: { apiKey: "sk-ant-api03-real-key" },
-          openai: { apiKey: "sk-openai-real-key" },
+          anthropic: { apiKey: "sk-ant-placeholder-key" },
+          openai: { apiKey: "sk-openai-placeholder-key" },
         },
       },
     };
@@ -51,7 +51,7 @@ describe("restoreEnvVarRefs", () => {
   });
 
   it("preserves new keys not in parsed", () => {
-    const incoming = { apiKey: "sk-ant-api03-real-key", newField: "hello" };
+    const incoming = { apiKey: "sk-ant-placeholder-key", newField: "hello" };
     const parsed = { apiKey: "${ANTHROPIC_API_KEY}" };
     const result = restoreEnvVarRefs(incoming, parsed, env);
     expect(result).toEqual({ apiKey: "${ANTHROPIC_API_KEY}", newField: "hello" });
@@ -65,14 +65,14 @@ describe("restoreEnvVarRefs", () => {
   });
 
   it("handles arrays", () => {
-    const incoming = ["sk-ant-api03-real-key", "literal"];
+    const incoming = ["sk-ant-placeholder-key", "literal"];
     const parsed = ["${ANTHROPIC_API_KEY}", "literal"];
     const result = restoreEnvVarRefs(incoming, parsed, env);
     expect(result).toEqual(["${ANTHROPIC_API_KEY}", "literal"]);
   });
 
   it("handles null/undefined parsed gracefully", () => {
-    const incoming = { apiKey: "sk-ant-api03-real-key" };
+    const incoming = { apiKey: "sk-ant-placeholder-key" };
     expect(restoreEnvVarRefs(incoming, null, env)).toEqual(incoming);
     expect(restoreEnvVarRefs(incoming, undefined, env)).toEqual(incoming);
   });
@@ -102,10 +102,10 @@ describe("restoreEnvVarRefs", () => {
   });
 
   it("does not restore when parsed value has no env var pattern", () => {
-    const incoming = { apiKey: "sk-ant-api03-real-key" };
-    const parsed = { apiKey: "sk-ant-api03-real-key" };
+    const incoming = { apiKey: "sk-ant-placeholder-key" };
+    const parsed = { apiKey: "sk-ant-placeholder-key" };
     const result = restoreEnvVarRefs(incoming, parsed, env);
-    expect(result).toEqual({ apiKey: "sk-ant-api03-real-key" });
+    expect(result).toEqual({ apiKey: "sk-ant-placeholder-key" });
   });
 
   // Edge case: env mutation between read and write (Greptile comment #1)
@@ -154,7 +154,7 @@ describe("restoreEnvVarRefs", () => {
     // In the config file: $${ANTHROPIC_API_KEY}
     // substituteString resolves this to literal "${ANTHROPIC_API_KEY}"
     // So incoming would be "${ANTHROPIC_API_KEY}" (the literal text)
-    const incoming = { note: "${ANTHROPIC_API_KEY}" };
+    const incoming = { apiKey: "${ANTHROPIC_API_KEY}" };
     const parsed = { note: "$${ANTHROPIC_API_KEY}" };
 
     const result = restoreEnvVarRefs(incoming, parsed, env);

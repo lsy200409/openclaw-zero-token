@@ -6,8 +6,8 @@
 
 | 方案 | 目录 | 端口 | 内存 | 认证方式 | 模型来源 |
 |------|------|------|------|----------|----------|
-| **ds2api（极简代理）** | `/home/luoshenye/桌面/openclaw-main` | 3001 | ~60 MB | 固定 Token | DeepSeek 官方 API (ds2api Go binary) |
-| **Zero-Token（完整网关）** | `/home/luoshenye/桌面/op new/openclaw-zero-token-main` | 3002 | ~100 MB | 浏览器 Cookie | 11个Web平台免Token |
+| **ds2api（极简代理）** | `/path/to/openclaw-main` | 3001 | ~60 MB | 固定 Token | DeepSeek 官方 API (ds2api Go binary) |
+| **Zero-Token（完整网关）** | `/path/to/openclaw-zero-token-main` | 3002 | ~100 MB | 浏览器 Cookie | 11个Web平台免Token |
 
 ---
 
@@ -89,7 +89,7 @@ flowchart LR
 格式3: <tool_call>{"name":"exec","arguments":{"command":"ls"}}</tool_call>
 ```
 
-对应的正则([web-tool-parser.ts](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/src/zero-token/tool-calling/web-tool-parser.ts))：
+对应的正则([web-tool-parser.ts](src/zero-token/tool-calling/web-tool-parser.ts))：
 - `FENCED_REGEX` — 匹配 ```tool_json 围栏
 - `BARE_JSON_REGEX` — 匹配裸JSON
 - `XML_TOOL_REGEX` — 匹配 XML 标签
@@ -178,7 +178,7 @@ WebUI → WebSocket → OpenClaw Gateway
 
 ### 模块A: 结构化错误格式
 
-[web-tool-parser.ts](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/src/zero-token/tool-calling/web-tool-parser.ts)
+[web-tool-parser.ts](src/zero-token/tool-calling/web-tool-parser.ts)
 
 ```typescript
 interface ToolCallParseResult {
@@ -225,12 +225,12 @@ function tryFuzzyParse(text) {
 
 ```bash
 # ds2api（主项目）
-pm2 start /home/luoshenye/桌面/openclaw-main/ecosystem.config.cjs
+pm2 start /path/to/openclaw-main/ecosystem.config.cjs
 # 或
-cd /home/luoshenye/桌面/openclaw-main && bash server.sh start
+cd /path/to/openclaw-main && bash server.sh start
 
 # Zero-Token（新项目）
-cd "/home/luoshenye/桌面/op new/openclaw-zero-token-main"
+cd "/path/to/openclaw-zero-token-main"
 export OPENCLAW_CONFIG_PATH="$PWD/.openclaw-upstream-state/openclaw.json"
 export OPENCLAW_STATE_DIR="$PWD/.openclaw-upstream-state"
 node openclaw.mjs gateway --port 3002
@@ -246,21 +246,21 @@ node openclaw.mjs gateway --port 3002
 
 | 文件 | 功能 |
 |------|------|
-| [minimal-gateway-proxy.cjs](file:///home/luoshenye/桌面/openclaw-main/minimal-gateway-proxy.cjs) | 核心代理（~2200行） |
-| [ecosystem.config.cjs](file:///home/luoshenye/桌面/openclaw-main/ecosystem.config.cjs) | PM2 配置 |
-| [tools/](file:///home/luoshenye/桌面/openclaw-main/tools/) | 诊断/监控/维护工具 |
-| [PROJECT_MODULES.md](file:///home/luoshenye/桌面/openclaw-main/PROJECT_MODULES.md) | 模块文档 |
+| [minimal-gateway-proxy.cjs](path/to/openclaw-main/minimal-gateway-proxy.cjs) | 核心代理（~2200行） |
+| [ecosystem.config.cjs](path/to/openclaw-main/ecosystem.config.cjs) | PM2 配置 |
+| [tools/](path/to/openclaw-main/tools/) | 诊断/监控/维护工具 |
+| [PROJECT_MODULES.md](path/to/openclaw-main/PROJECT_MODULES.md) | 模块文档 |
 
 ### Zero-Token 项目
 
 | 文件/目录 | 功能 |
 |-----------|------|
-| [src/zero-token/streams/](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/src/zero-token/streams/) | 11个Web平台的流处理实现 |
-| [src/zero-token/providers/](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/src/zero-token/providers/) | Cookie采集/浏览器认证/API客户端 |
-| [src/zero-token/tool-calling/](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/src/zero-token/tool-calling/) | 工具调用中间件+解析器+提示词 |
-| [src/zero-token/bridge/](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/src/zero-token/bridge/) | 模型发现+提供者注册 |
-| [src/zero-token/extensions/](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/src/zero-token/extensions/) | AskOnce 多模型对比功能 |
-| [server.sh](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/server.sh) | 服务启动脚本（已修复jq依赖） |
-| [start-chrome-debug.sh](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/start-chrome-debug.sh) | Chrome调试模式启动 |
-| [ecosystem.zero-token.config.cjs](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/ecosystem.zero-token.config.cjs) | PM2 Zero-Token 配置（新建） |
-| [src/zero-token/tool-calling/tool-error-handler.ts](file:///home/luoshenye/桌面/op new/openclaw-zero-token-main/src/zero-token/tool-calling/tool-error-handler.ts) | 工具调用容错增强（新建） |
+| [src/zero-token/streams/](src/zero-token/streams/) | 11个Web平台的流处理实现 |
+| [src/zero-token/providers/](src/zero-token/providers/) | Cookie采集/浏览器认证/API客户端 |
+| [src/zero-token/tool-calling/](src/zero-token/tool-calling/) | 工具调用中间件+解析器+提示词 |
+| [src/zero-token/bridge/](src/zero-token/bridge/) | 模型发现+提供者注册 |
+| [src/zero-token/extensions/](src/zero-token/extensions/) | AskOnce 多模型对比功能 |
+| [server.sh](server.sh) | 服务启动脚本（已修复jq依赖） |
+| [start-chrome-debug.sh](start-chrome-debug.sh) | Chrome调试模式启动 |
+| [ecosystem.zero-token.config.cjs](ecosystem.zero-token.config.cjs) | PM2 Zero-Token 配置（新建） |
+| [src/zero-token/tool-calling/tool-error-handler.ts](src/zero-token/tool-calling/tool-error-handler.ts) | 工具调用容错增强（新建） |

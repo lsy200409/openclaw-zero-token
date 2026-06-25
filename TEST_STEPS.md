@@ -105,7 +105,7 @@ ps aux | grep "chrome.*9222" | grep -v grep
 **访问地址**：
 
 ```
-http://127.0.0.1:3001/#token=62b791625fa441be036acd3c206b7e14e2bb13c803355823
+http://127.0.0.1:3001/#token=placeholder-gateway-token
 ```
 
 浏览器应该会自动打开，如果没有，手动访问上面的地址。

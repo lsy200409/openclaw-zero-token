@@ -36,6 +36,7 @@ const CORE_TOOL_SECTION_ORDER: Array<{ id: string; label: string }> = [
   { id: "nodes", label: "Nodes" },
   { id: "agents", label: "Agents" },
   { id: "media", label: "Media" },
+  { id: "external", label: "External Services" },
 ];
 
 const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
@@ -278,6 +279,22 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     label: "tts",
     description: "Text-to-speech conversion",
     sectionId: "media",
+    profiles: [],
+    includeInOpenClawGroup: true,
+  },
+  {
+    id: "mpt_video",
+    label: "mpt_video",
+    description: "AI short video generation (MoneyPrinterTurbo)",
+    sectionId: "external",
+    profiles: [],
+    includeInOpenClawGroup: true,
+  },
+  {
+    id: "aitoearn",
+    label: "aitoearn",
+    description: "AI content creation, publishing & monetization (AiToEarn)",
+    sectionId: "external",
     profiles: [],
     includeInOpenClawGroup: true,
   },

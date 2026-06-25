@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-本文档详细描述针对 `/home/luoshenye/桌面/op new/openclaw-zero-token-main` 项目的四个关键问题的诊断和修复方案。
+本文档详细描述针对 `/path/to/openclaw-zero-token-main` 项目的四个关键问题的诊断和修复方案。
 
 ---
 

@@ -4,7 +4,7 @@ const http = require("http");
 
 const HOST = "127.0.0.1";
 const PORT = 3002;
-const TOKEN = "62b791625fa441be036acd3c206b7e14e2bb13c803355823";
+const TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || "placeholder-token";
 const PASS = "✅";
 const FAIL = "❌";
 const LOG_FILE = "/tmp/openclaw-upstream-gateway.log";
@@ -106,7 +106,7 @@ async function runTests() {
     const discovered = await send("web.providers.discover");
     if (discovered.result?.providers && Array.isArray(discovered.result.providers)) {
       const providers = discovered.result.providers;
-      const providerIds = providers.map(p => p.id);
+      const providerIds = new Set(providers.map(p => p.id));
       report("T2: 提供商总数", PASS, `共 ${providers.length} 个`);
       
       // 检查各平台是否注册
@@ -120,7 +120,7 @@ async function runTests() {
         { id: "grok-web", name: "Grok" },
       ];
       for (const p of checkPlatforms) {
-        const found = providerIds.includes(p.id);
+        const found = providerIds.has(p.id);
         report(`T2.${p.name}提供商`, found ? PASS : FAIL, found ? "已注册" : "未找到");
       }
     } else {
@@ -135,7 +135,7 @@ async function runTests() {
   try {
     const models = await send("models.list");
     if (models.result?.models && Array.isArray(models.result.models)) {
-      const modelIds = models.result.models.map(m => m.id);
+      const modelIds = new Set(models.result.models.map(m => m.id));
       const totalModels = models.result.models.length;
       report("T3: 总模型数", PASS, `${totalModels} 个`);
 
@@ -152,7 +152,7 @@ async function runTests() {
       ];
       
       for (const m of newModes) {
-        const found = modelIds.includes(m.id);
+        const found = modelIds.has(m.id);
         report(`T3: ${m.name} (${m.id})`, found ? PASS : FAIL, 
           found ? "已注册" : "未找到");
       }
@@ -297,6 +297,6 @@ async function runTests() {
 
 runTests().catch(e => {
   console.error("测试崩溃:", e);
-  if (ws) ws.close();
+  if (ws) {ws.close();}
   process.exit(1);
 });

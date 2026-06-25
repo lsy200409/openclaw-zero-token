@@ -632,4 +632,39 @@ export type ToolsConfig = {
       deny?: string[];
     };
   };
+  /** MoneyPrinterTurbo video generation tool configuration. */
+  mptVideo?: {
+    /** Base URL of the MoneyPrinterTurbo API (default: http://127.0.0.1:8080). */
+    baseUrl?: string;
+    /** API key for authenticated requests. */
+    apiKey?: SecretInput;
+    /** Enable/disable specific actions. */
+    actions?: {
+      generate_video?: boolean;
+      generate_script?: boolean;
+      generate_terms?: boolean;
+      generate_social_metadata?: boolean;
+      query_task?: boolean;
+      list_tasks?: boolean;
+    };
+  };
+  /** AiToEarn content creation & publishing tool configuration. */
+  aitoearn?: {
+    /** Base URL of the AiToEarn API (default: http://127.0.0.1:8080). */
+    baseUrl?: string;
+    /** JWT token for authenticated API calls. */
+    token?: SecretInput;
+    /** Enable/disable specific actions. */
+    actions?: {
+      create_content?: boolean;
+      generate_image?: boolean;
+      generate_video?: boolean;
+      publish?: boolean;
+      list_accounts?: boolean;
+      list_materials?: boolean;
+      create_material?: boolean;
+      engagement?: boolean;
+      list_tasks?: boolean;
+    };
+  };
 };

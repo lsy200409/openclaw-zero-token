@@ -20,7 +20,7 @@ import http from "node:http";
 import { Readable } from "node:stream";
 
 const DS2API_UPSTREAM = "http://localhost:5001";
-const DS2API_KEY = "local-dev-key";
+const DS2API_KEY = process.env.DS2API_KEY || "placeholder-dev-key";
 const PORT = parseInt(process.env.ADAPTER_PORT || "3003", 10);
 
 const ADAPTER_MODELS = [
@@ -163,8 +163,8 @@ async function handleStreaming(body, model, res) {
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
-      if (closed) break;
+      if (done) {break;}
+      if (closed) {break;}
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
@@ -280,7 +280,7 @@ const server = http.createServer(async (req, res) => {
 
     // Remove undefined fields
     Object.keys(upstreamBody).forEach((k) => {
-      if (upstreamBody[k] === undefined) delete upstreamBody[k];
+      if (upstreamBody[k] === undefined) {delete upstreamBody[k];}
     });
 
     // Log incoming request

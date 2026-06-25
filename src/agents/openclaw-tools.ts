@@ -32,6 +32,8 @@ import { createSessionsYieldTool } from "./tools/sessions-yield-tool.js";
 import { createSubagentsTool } from "./tools/subagents-tool.js";
 import { createTtsTool } from "./tools/tts-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
+import { createMoneyPrinterTurboTool } from "./tools/mpt-video-tool.js";
+import { createAiToEarnTool } from "./tools/aitoearn-tool.js";
 import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
 type OpenClawToolsDeps = {
@@ -261,6 +263,16 @@ export function createOpenClawTools(
     ...(webFetchTool ? [webFetchTool] : []),
     ...(imageTool ? [imageTool] : []),
     ...(pdfTool ? [pdfTool] : []),
+    createMoneyPrinterTurboTool({
+      baseUrl: resolvedConfig?.tools?.mptVideo?.baseUrl,
+      apiKey: resolvedConfig?.tools?.mptVideo?.apiKey,
+      actions: resolvedConfig?.tools?.mptVideo?.actions,
+    }),
+    createAiToEarnTool({
+      baseUrl: resolvedConfig?.tools?.aitoearn?.baseUrl,
+      token: resolvedConfig?.tools?.aitoearn?.token,
+      actions: resolvedConfig?.tools?.aitoearn?.actions,
+    }),
   ];
 
   const pluginTools = resolvePluginTools({

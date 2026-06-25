@@ -308,7 +308,7 @@ pnpm ui:build
 ### Web UI
 
 执行 `./server.sh` 后会自动启动 Web UI，在聊天界面直接使用 AI 模型。
-后续也可以手动访问 `http://127.0.0.1:3001/chat?session=62b791625fa441be036acd3c206b7e14e2bb13c803355823`
+后续也可以手动访问 `http://127.0.0.1:3001/chat?session=placeholder-gateway-token`
 
 #### 切换模型
 

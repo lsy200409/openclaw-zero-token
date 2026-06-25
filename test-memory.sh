@@ -1,7 +1,7 @@
 #!/bin/bash
 # 三轮记忆测试脚本 - 验证会话持久性
 # Session key 必须用 agent:<agentId>:<rest> 格式
-TOKEN="62b791625fa441be036acd3c206b7e14e2bb13c803355823"
+TOKEN="${OPENCLAW_GATEWAY_TOKEN:-placeholder-token}"
 BASE="http://127.0.0.1:3002"
 
 GREEN='\033[0;32m'
